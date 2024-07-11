@@ -17,17 +17,19 @@ CORS(app)  # Esto permite todas las solicitudes CORS
 if not os.path.exists('uploads'):
     os.makedirs('uploads')
 
-# Cargar el modelo Keras
-try:
-    model = tf.keras.models.load_model('model_adam.h5')
-except Exception as e:
-    print(f"Error al cargar el modelo: {e}")
+# Cargar el modelo TensorFlow Lite
+interpreter = tf.lite.Interpreter(model_path='model.tflite')
+interpreter.allocate_tensors()
+
+# Obtener detalles de entrada y salida
+input_details = interpreter.get_input_details()
+output_details = interpreter.get_output_details()
 
 def process_audio(file_path):
     y, sr = librosa.load(file_path, sr=1000, duration=1.2)
     y = librosa.util.fix_length(y, size=1200)
     y = y / np.max(np.abs(y))
-    return y.reshape(1, len(y), 1)
+    return y.reshape(1, len(y), 1).astype(np.float32)
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -40,7 +42,9 @@ def upload_file():
     file.save(file_path)
     processed_audio = process_audio(file_path)
     try:
-        prediction = model.predict(processed_audio)
+        interpreter.set_tensor(input_details[0]['index'], processed_audio)
+        interpreter.invoke()
+        prediction = interpreter.get_tensor(output_details[0]['index'])
         return jsonify(prediction.tolist()[0])
     except Exception as e:
         return str(e), 500
