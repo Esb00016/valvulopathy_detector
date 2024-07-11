@@ -1,14 +1,9 @@
 import os
 import numpy as np
 import librosa
-import tensorflow as tf
+import tflite_runtime.interpreter as tflite
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-
-# Desactivar optimizaciones de TensorFlow
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
-os.environ['TF_DISABLE_MKL'] = '1'
 
 app = Flask(__name__, static_folder='build')
 CORS(app)  # Esto permite todas las solicitudes CORS
@@ -18,7 +13,7 @@ if not os.path.exists('uploads'):
     os.makedirs('uploads')
 
 # Cargar el modelo TensorFlow Lite
-interpreter = tf.lite.Interpreter(model_path='model.tflite')
+interpreter = tflite.Interpreter(model_path='model.tflite')
 interpreter.allocate_tensors()
 
 # Obtener detalles de entrada y salida
